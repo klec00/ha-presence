@@ -22,7 +22,7 @@ Observations for the Bayesian sensor's include:
 ||iPad and Laptop presence|[Netgear](https://www.home-assistant.io/integrations/netgear/) router integration|
 ||Car device tracker|[Volvo on call](https://www.home-assistant.io/integrations/volvooncall/) integration|
 |Time based sensors|Nighttime|see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state)|
-||Workhour(*)|[Workday](https://www.home-assistant.io/integrations/workday/) and [Times of day](https://www.home-assistant.io/integrations/tod/) integrations|
+||Workhour(*)|[Workday](https://www.home-assistant.io/integrations/workday/) and [Times of day](https://www.home-assistant.io/integrations/tod/) integrations. For implementation, see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state)|
 |Other|Calendar entries|[Google calendar](https://www.home-assistant.io/integrations/calendar.google/) integration|
 
 (*) The Workhour observation parameters had to be tweaked during Covid-19 to accomodate for WFH.
@@ -48,7 +48,7 @@ Some change shas been made to the original scripts referenced above. Most notabl
 While implementing this change, I discovered that if a two person's presence sensors were updated at the same time, the automation's would only update the state for one person. The reason for this was that up until [Home Assistant 0.113](https://community.home-assistant.io/t/0-113-automations-scripts-and-even-more-performance/213387), automations triggered whilst already running would just drop silently. With the new directive `mode: queued`, the automations work just fine.
 
 ### Family presence state
-In addition to the individual presence states `input_select.userX_status_dropdown`, I am using a template sensor `family_presence_state` to set the presence state of the family. The way the template works is that it returns the "lowest" presence state observed amongst any family member in `group.family_home_sensor`, with the state "Home" being the lowest, and the state "Gone 24h" being the highest. The Family presence state is useful to set the house to simulation mode when family has been away for more than 24h (state = "Gone 24h"). For more information about my house modes and sumulations, see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state).
+In addition to the individual presence states `input_select.userX_status_dropdown`, I am using a template sensor `family_presence_state` to set the presence state of the family. The way the template works is that it returns the "lowest" presence state observed amongst any family member in `group.family_home_sensor`, with the state "Home" being the lowest, and the state "Gone 24h" being the highest. The Family presence state is useful to set the house to simulation mode when family has been away for more than 24h (state = "Gone 24h"). For more information about my house modes and simulations, see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state).
 
 <img src="./image/PresenceFamily.png" width="600"/>
 
@@ -80,6 +80,10 @@ family_presence_state:
            4:'Gone',
            5:'Gone 24h' } %}
     {{ mapper[ns.status] }}
-`````
+````
+
+## Automations based on Presence 
+_TODO_
+
 
 
