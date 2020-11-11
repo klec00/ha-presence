@@ -1,0 +1,127 @@
+automation:
+################################################################
+# presence states
+#
+# Presence state detection based on multiple sensors and 
+# bayesian sensor.
+# Presence can take multiple states based on article at 
+# https://philhawthorne.com/making-home-assistants-presence-detection-not-so-binary/
+#
+# States:         >  Just left     >   Gone   >   Gone>24h
+#          Home         v  ^             |          |
+#                 <  Just arrived       <          <
+#################################################################
+  - id: set_person_just_arrived
+    alias: Sätt person 'Kom nyss hem'
+    mode: queued
+    trigger:
+    - platform: state
+      entity_id: 
+        - binary_sensor.user1_home_sensor
+        - binary_sensor.user2_home_sensor
+        - binary_sensor.user4_home_sensor
+        - binary_sensor.user3_home_sensor
+        - binary_sensor.user5_home_sensor
+      to: 'on'
+
+    action:
+    - service: input_select.select_option
+      data_template:
+        entity_id: >
+          {% set name = trigger.to_state.entity_id.split(".") [1] | replace("_home_sensor","")%}
+            input_select.{{name}}_status_dropdown
+        option: >
+          {% set name = trigger.to_state.entity_id.split(".") [1] | replace("_home_sensor","")%}
+          {% if is_state('input_select.' + name + '_status_dropdown', 'Lämnade nyss') %}
+            Hemma
+          {% else %}
+            Kom nyss hem
+          {% endif %}
+
+  - id: set_person_home
+    alias: Sätt person 'Hemma'
+    mode: queued
+    trigger:
+    - platform: state
+      entity_id: 
+        - input_select.user1_status_dropdown
+        - input_select.user2_status_dropdown
+        - input_select.user4_status_dropdown
+        - input_select.user3_status_dropdown
+        - input_select.user5_status_dropdown
+      to: 'Kom nyss hem'
+      for:
+        minutes: 10
+
+    action:
+    - service: input_select.select_option
+      data_template:
+        entity_id: >
+          {{trigger.to_state.entity_id}}
+        option: Hemma
+
+  - id: set_person_just_left
+    alias: Sätt person 'Lämnade nyss huset'
+    mode: queued
+    trigger:
+    - platform: state
+      entity_id: 
+        - binary_sensor.user1_home_sensor
+        - binary_sensor.user2_home_sensor
+        - binary_sensor.user4_home_sensor
+        - binary_sensor.user3_home_sensor
+        - binary_sensor.user5_home_sensor
+      from: 'on'
+      to: 'off'
+
+    action:
+    - service: input_select.select_option
+      data_template:
+        entity_id: >
+          {% set name = trigger.to_state.entity_id.split(".") [1] | replace("_home_sensor","")%}
+            input_select.{{name}}_status_dropdown
+        option: Lämnade nyss huset
+
+  - id: set_person_away
+    alias: Sätt person 'Borta'
+    mode: queued
+    trigger:
+    - platform: state
+      entity_id: 
+        - input_select.user1_status_dropdown
+        - input_select.user2_status_dropdown
+        - input_select.user4_status_dropdown
+        - input_select.user3_status_dropdown
+        - input_select.user5_status_dropdown
+      to: 'Lämnade nyss huset'
+      for:
+        minutes: 10
+
+    action:
+    - service: input_select.select_option
+      data_template:
+        entity_id: >
+          {{trigger.to_state.entity_id}}
+        option: Borta
+
+
+  - id: set_person_extended_away
+    alias: Sätt person 'Borta längre än 24H'
+    mode: queued
+    trigger:
+    - platform: state
+      entity_id: 
+        - input_select.user1_status_dropdown
+        - input_select.user2_status_dropdown
+        - input_select.user4_status_dropdown
+        - input_select.user3_status_dropdown
+        - input_select.user5_status_dropdown
+      to: 'Borta'
+      for:
+        hours: 24
+    action:
+    - service: input_select.select_option
+      data_template:
+        entity_id: >
+          {{trigger.to_state.entity_id}}
+        option: Borta längre än 24H

@@ -1,0 +1,409 @@
+# Enables a map showing the location of tracked devices
+map:
+
+input_select:
+  user1_status_dropdown:
+    name: user1
+    options:
+      - Hemma
+      - Kom nyss hem
+      - Lämnade nyss huset
+      - Borta
+      - Borta längre än 24H
+  user2_status_dropdown:
+    name: user2
+    options:
+      - Hemma
+      - Kom nyss hem
+      - Lämnade nyss huset
+      - Borta
+      - Borta längre än 24H
+  user4_status_dropdown:
+    name: user4
+    options:
+      - Hemma
+      - Kom nyss hem
+      - Lämnade nyss huset
+      - Borta
+      - Borta längre än 24H
+  user3_status_dropdown:
+    name: user3
+    options:
+      - Hemma
+      - Kom nyss hem
+      - Lämnade nyss huset
+      - Borta
+      - Borta längre än 24H
+  user5_status_dropdown:
+    name: user5
+    options:
+      - Hemma
+      - Kom nyss hem
+      - Lämnade nyss huset
+      - Borta
+      - Borta längre än 24H
+
+sensor:
+  - platform: template
+    sensors:
+      user1_status:
+        value_template: '{{ states.input_select.user1_status_dropdown.state }}'
+        friendly_name: 'user1'
+      user2_status:
+        value_template: '{{ states.input_select.user2_status_dropdown.state }}'
+        friendly_name: 'user2'
+      user4_status:
+        value_template: '{{ states.input_select.user4_status_dropdown.state }}'
+        friendly_name: 'user4'
+      user3_status:
+        value_template: '{{ states.input_select.user3_status_dropdown.state }}'
+        friendly_name: 'user3'
+      user5_status:
+        value_template: '{{ states.input_select.user5_status_dropdown.state }}'
+        friendly_name: 'user5'
+
+# <----- temporary hack to change picture to work from home
+      user1_status_picture:
+        value_template: >
+          {% set status = states('input_select.user1_status_dropdown') %}
+          {% set working = states('binary_sensor.workhour') %}
+          {% if status == 'Hemma' and working == 'on' %}
+            Arbetar
+          {% else %}
+            {{ status }}
+          {% endif %}
+        friendly_name: 'user1'
+
+      user2_status_picture:
+        value_template: >
+          {% set status = states('input_select.user2_status_dropdown') %}
+          {% set working = states('binary_sensor.workhour') %}
+          {% if status == 'Hemma' and working == 'on' %}
+            Arbetar
+          {% else %}
+            {{ status }}
+          {% endif %}
+        friendly_name: 'user2'
+  # ----->
+
+      family_presence_state:
+        friendly_name: Presence state of family as a group
+        value_template: >
+          {% set dummy_trigger = states('sensor.time') %}
+          {% set ns = namespace(status=5) %}
+          {% set mapper =
+                      { 'Hemma':1,
+                        'Kom nyss hem':2,
+                        'Lämnade nyss huset':3,
+                        'Borta':4,
+                        'Borta längre än 24H':5 } %}
+          {% for tracker in expand('group.family_home_sensor') %}
+            {% set tracker_status = states(tracker.entity_id) %}
+            {% set tracker_num = mapper[tracker_status] %}
+            {% if tracker_num < ns.status %}
+              {% set ns.status = tracker_num %}
+            {% endif %}
+          {% endfor %}
+          {% set mapper =
+                      { 1:'Hemma',
+                        2:'Kom nyss hem',
+                        3:'Lämnade nyss huset',
+                        4:'Borta',
+                        5:'Borta längre än 24H' } %}
+          {{ mapper[ns.status] }}
+
+
+binary_sensor:
+
+# Bayesian sensors for presence detection
+#  Sensor state      Home/True   |  Away/False
+#  Person          Home    Away  | Home   Away
+#  Alarm            -       -    |  0      1
+#  Night (22-06)   0.7      0.3  |  -      -
+#  Workhour (9-17) 0.3      0.7  |  -      -
+#  Phone           0.8      0.2  |  0.5   0.8
+#  iPad            0.6      0.3  |  -      -
+#  Laptop          0.6      0.3  |  -      -
+#  Car             0.6      0.4  | 0.4    0.65
+#  Away (calendar)  -        -   | 0.2    0.8
+  - platform: bayesian
+    name: user1_home_sensor
+    prior: 0.5
+    probability_threshold: 0.7
+    observations:
+      - entity_id: binary_sensor.alarm  # Alarm armed away (='on')
+        prob_given_true: 0.0
+        prob_given_false: 1.0
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.night # Night (22-06)
+        prob_given_true: 0.7
+        prob_given_false: 0.3
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.workhour # Workhour during workday
+        prob_given_true: 0.3
+        prob_given_false: 0.7
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: device_tracker.skalman_2 # Phone HA app reporting home
+        prob_given_true: 0.9
+        prob_given_false: 0.1
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.laptop3 # Phone reporting home
+        prob_given_true: 0.8
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.skalman_2 # Phone HA app reporting away
+        prob_given_true: 0.5
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: device_tracker.laptop3 # Phone reporting away
+        prob_given_true: 0.5
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: device_tracker.user1ipadlan # iPad reporting home
+        prob_given_true: 0.6
+        prob_given_false: 0.3
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.laptop4 # Laptop reporting home
+        prob_given_true: 0.6
+        prob_given_false: 0.3
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.volvo_car # Car reporting home
+        prob_given_true: 0.6
+        prob_given_false: 0.4
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.volvo_car # Car reporting away
+        prob_given_true: 0.4
+        prob_given_false: 0.65
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: calendar.user1_borta # Calendar indicating away (='on')
+        prob_given_true: 0.2
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'on'
+
+#  Sensor state      Home/True   |  Away/False
+#  Person          Home    Away  | Home   Away
+#  Alarm            -       -    |  0      1
+#  Night (22-06)   0.8      0.2  |  -      -
+#  Workhour (9-17) 0.2      0.8  |  -      -
+#  Phone           0.8      0.2  |  0.5   0.8
+#  Laptop          0.6      0.2  |  -      -
+#  Car             0.6      0.4  | 0.4    0.65
+#  Away (calendar)  -        -   | 0.2    0.8
+  - platform: bayesian
+    name: user2_home_sensor
+    prior: 0.5
+    probability_threshold: 0.7
+    observations:
+      - entity_id: binary_sensor.alarm  # Alarm armed away (='on')
+        prob_given_true: 0.0
+        prob_given_false: 1.0
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.night # Night (22-06)
+        prob_given_true: 0.8
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.workhour # Workhour during workday
+        prob_given_true: 0.2
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: device_tracker.iphone_2 # Phone reporting home
+        prob_given_true: 0.8
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.iphone_2 # Phone reporting away
+        prob_given_true: 0.5
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: device_tracker.laptop5 # Laptop reporting home
+        prob_given_true: 0.6
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.volvo_car # Car reporting home
+        prob_given_true: 0.6
+        prob_given_false: 0.4
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.volvo_car # Car reporting away
+        prob_given_true: 0.4
+        prob_given_false: 0.65
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: calendar.user2_borta # Calendar indicating away (='on')
+        prob_given_true: 0.2
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'on'
+
+# Bayesian sensors for presence detection
+#  Sensor state      Home/True   |  Away/False
+#  Person          Home    Away  | Home   Away
+#  Alarm            -       -    |  0      1
+#  Night (22-06)   0.8      0.2  |  -      -
+#  Workhour (9-17) 0.4      0.7  |  -      -
+#  Phone           0.8      0.2  |  0.4   0.8
+#  Laptop          0.6      0.3  |  -      -
+  - platform: bayesian
+    name: user4_home_sensor
+    prior: 0.5
+    probability_threshold: 0.7
+    observations:
+      - entity_id: binary_sensor.alarm  # Alarm armed away (='on')
+        prob_given_true: 0.0
+        prob_given_false: 1.0
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.night # Night (22-06)
+        prob_given_true: 0.8
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.workhour # Workhour during workday
+        prob_given_true: 0.4
+        prob_given_false: 0.7
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: device_tracker.user4_iphone # Phone reporting home
+        prob_given_true: 0.8
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.user4_iphone # Phone reporting away
+        prob_given_true: 0.5
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: device_tracker.laptop6 # Laptop reporting home
+        prob_given_true: 0.7
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+
+#  Sensor state      Home/True   |  Away/False
+#  Person          Home    Away  | Home   Away
+#  Alarm            -       -    |  0      1
+#  Night (22-06)   0.8      0.2  |  -      -
+#  Workhour (9-17) 0.2      0.8  |  -      -
+#  Phone           0.8      0.2  |  0.5   0.8
+#  Laptop          0.6      0.2  |  -      -
+#  Car             0.6      0.4  | 0.4    0.65
+#  Away (calendar)  -        -   | 0.2    0.8
+  - platform: bayesian
+    name: user3_home_sensor
+    prior: 0.5
+    probability_threshold: 0.7
+    observations:
+      - entity_id: binary_sensor.alarm  # Alarm armed away (='on')
+        prob_given_true: 0.0
+        prob_given_false: 1.0
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.night # Night (22-06)
+        prob_given_true: 0.6
+        prob_given_false: 0.4
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.workhour # Workhour during workday
+        prob_given_true: 0.2
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: device_tracker.user3stelefonlan # Phone reporting home
+        prob_given_true: 0.8
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.user3stelefonlan # Phone reporting away
+        prob_given_true: 0.5
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: device_tracker.laptop1 # Laptop reporting home
+        prob_given_true: 0.6
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+
+#  Sensor state      Home/True   |  Away/False
+#  Person          Home    Away  | Home   Away
+#  Alarm            -       -    |  0      1
+#  Night (22-06)   0.8      0.2  |  -      -
+#  Workhour (9-17) 0.2      0.8  |  -      -
+#  Phone           0.8      0.2  |  0.5   0.8
+#  Laptop          0.6      0.2  |  -      -
+#  Car             0.6      0.4  | 0.4    0.65
+#  Away (calendar)  -        -   | 0.2    0.8
+  - platform: bayesian
+    name: user5_home_sensor
+    prior: 0.5
+    probability_threshold: 0.7
+    observations:
+      - entity_id: binary_sensor.alarm  # Alarm armed away (='on')
+        prob_given_true: 0.0
+        prob_given_false: 1.0
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.night # Night (22-06)
+        prob_given_true: 0.6
+        prob_given_false: 0.4
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: binary_sensor.workhour # Workhour during workday
+        prob_given_true: 0.2
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'on'
+      - entity_id: device_tracker.user5s_iphone # Phone reporting home
+        prob_given_true: 0.8
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+      - entity_id: device_tracker.user5s_iphone # Phone reporting away
+        prob_given_true: 0.5
+        prob_given_false: 0.8
+        platform: 'state'
+        to_state: 'not_home'
+      - entity_id: device_tracker.laptop2 # Laptop reporting home
+        prob_given_true: 0.6
+        prob_given_false: 0.2
+        platform: 'state'
+        to_state: 'home'
+
+group:
+  house_presence_sensor:
+    name: Group of presence sensor for family
+    entities:
+      - binary_sensor.user1_home_sensor
+      - binary_sensor.user2_home_sensor
+      - binary_sensor.user4_home_sensor
+      - binary_sensor.user3_home_sensor
+      - binary_sensor.user5_home_sensor
+
+  family_home_sensor:
+    name: Family view of presence sensor
+    entities:
+      - input_select.user1_status_dropdown
+      - input_select.user2_status_dropdown
+      - input_select.user4_status_dropdown
+      - input_select.user5_status_dropdown
+      - input_select.user3_status_dropdown
+      
+
+      
