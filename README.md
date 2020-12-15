@@ -20,7 +20,7 @@ Observations for the Bayesian sensor's include:
 |Device Sensors|Mobile phone presence in home network|[Netgear](https://www.home-assistant.io/integrations/netgear/) router integration|
 ||Mobile phone location from HA app (not installed on all phones)|[iOS](https://www.home-assistant.io/integrations/ios/) integration and app|
 ||iPad and Laptop presence|[Netgear](https://www.home-assistant.io/integrations/netgear/) router integration|
-||Car device tracker|[Volvo on call](https://www.home-assistant.io/integrations/volvooncall/) integration|
+||Car device tracker|[BMW Connected Drive](https://www.home-assistant.io/integrations/bmw_connected_drive/) integration|
 |Time based sensors|Nighttime|see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state)|
 ||Workhour(*)|[Workday](https://www.home-assistant.io/integrations/workday/) and [Times of day](https://www.home-assistant.io/integrations/tod/) integrations. For implementation, see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state)|
 |Other|Calendar entries|[Google calendar](https://www.home-assistant.io/integrations/calendar.google/) integration|
