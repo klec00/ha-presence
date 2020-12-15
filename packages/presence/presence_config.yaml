@@ -176,12 +176,12 @@ binary_sensor:
         prob_given_false: 0.3
         platform: 'state'
         to_state: 'home'
-      - entity_id: device_tracker.volvo_car # Car reporting home
+      - entity_id: device_tracker.x3_xdrive30e # Car reporting home
         prob_given_true: 0.6
         prob_given_false: 0.4
         platform: 'state'
         to_state: 'home'
-      - entity_id: device_tracker.volvo_car # Car reporting away
+      - entity_id: device_tracker.x3_xdrive30e # Car reporting away
         prob_given_true: 0.4
         prob_given_false: 0.65
         platform: 'state'
@@ -236,12 +236,12 @@ binary_sensor:
         prob_given_false: 0.2
         platform: 'state'
         to_state: 'home'
-      - entity_id: device_tracker.volvo_car # Car reporting home
+      - entity_id: device_tracker.x3_xdrive30e # Car reporting home
         prob_given_true: 0.6
         prob_given_false: 0.4
         platform: 'state'
         to_state: 'home'
-      - entity_id: device_tracker.volvo_car # Car reporting away
+      - entity_id: device_tracker.x3_xdrive30e # Car reporting away
         prob_given_true: 0.4
         prob_given_false: 0.65
         platform: 'state'

@@ -1,18 +1,18 @@
 # Presence setup in Home Assistant
 
-[![ha_badge](https://img.shields.io/badge/HA_version-0.116.4-green.svg)](https://home-assistant.io)
+[![ha_badge](https://img.shields.io/badge/HA_version-0.118.5-green.svg)](https://home-assistant.io)
 
 [![Buy me a coffee][buymeacoffee-shield]][buymeacoffee]
 
 [buymeacoffee]: https://www.buymeacoffee.com/klec00
 [buymeacoffee-shield]: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
 
-Presence detection is useful for controlling a range of automations. Getting the presence detection to work is however sometimes a comlicated task. I make use of a combination of sensors to identify presence fo each family member, combined with a presence state machine that gives provides the flexibility to react on transitional states as well.
+Presence detection is useful for controlling a wide range of automations. Getting the detection of people's presence  to work is however sometimes quite tricky with a lot of false-positives. In my setup I make use of a range of diffeent sensors that I combine into one Bayesian sensor for each family member. The sensor is combined with a presence state machine that provides the additional flexibility to react on transitional states as well.
 
 ## Presence detection
-I use [Bayesian binary sensors](https://www.home-assistant.io/integrations/bayesian/) to identify if a person in the household is home or not. I have found that with proper tuning, this setup provides good enough accuracy for my needs. I recommend anyone interested in this approach to read the [How Bayes Sensors work, from a Statistics Professor](https://community.home-assistant.io/t/how-bayes-sensors-work-from-a-statistics-professor-with-working-google-sheets/143177) topic on the Home Assistant community.
+I use [Bayesian binary sensors](https://www.home-assistant.io/integrations/bayesian/) to identify if a person in the household is home or not. I have found that with proper tuning, this setup provides good enough accuracy for my needs, and the setup rarely needs attention. I recommend anyone interested in this approach to read the [How Bayes Sensors work, from a Statistics Professor](https://community.home-assistant.io/t/how-bayes-sensors-work-from-a-statistics-professor-with-working-google-sheets/143177) discussion on the Home Assistant community forum.
 
-For each family member, a Bayesian sensor `userX_home_sensor` is created with different sets of sensor for observations. 
+For each family member, a Bayesian sensor `binary_sensor.userX_home_sensor` is set up, each with different sensors and parameters to provide observations to the Bayesian sensor. 
 
 Observations for the Bayesian sensor's include:
 |Type|Observation|Source|
@@ -27,7 +27,7 @@ Observations for the Bayesian sensor's include:
 
 (*) The Workhour observation parameters had to be tweaked during Covid-19 to accomodate for WFH.
 
-I used to have the home alarm state as a significant contributor as well, setting the presence to away for each family member if the alarm was `armed_away`. The drawback with that was that I could not observe a person coming home before the alarm was unarmed. I couldn't trigger on e.g. mobile phone connecting to home wifi. I have therefore excluded the alarm state for now, and make use of the `input_select.home_alarm_state` (see [Security setup in Home Assistant](https://github.com/klec00/ha-security-state)) as a complementary data point to my automations.
+I used to have the home alarm state as a significant contributor as well, setting the presence to away for each family member if the alarm was `armed_away`. The drawback with that was that I could not identify a persons state of coming home before the alarm was unarmed. I couldn't trigger on e.g. mobile phone connecting to home wifi, which prevented me from implementing some lighting automations. I have therefore excluded the alarm state for now, and make use of the `input_select.home_alarm_state` (see [Security setup in Home Assistant](https://github.com/klec00/ha-security-state)) as a complementary data point to my automations.
 
 An additonal option could be to also make use of the [Person](https://www.home-assistant.io/integrations/person/) integration, but I've not tried that yet, the above Bayesian binary sensors works just fine for me. 
 
@@ -36,7 +36,7 @@ The presence state engine is an adoption of Phil Hawthorne's [making home-assist
 
 <img src="./image/PresencePerson.png" width="600"/>
 
-Some change shas been made to the original scripts referenced above. Most notably the automations make use of `trigger.to_state.entity_id` to extract which user's `input_select.userX_status_dropdown` helper should be updated. 
+Some changes has been made to the original scripts in Phil's blog post referenced above. Most notably the automations make use of `trigger.to_state.entity_id` to extract which user's `input_select.userX_status_dropdown` helper should be updated. 
 ````
   ...
   entity_id: >
@@ -48,11 +48,11 @@ Some change shas been made to the original scripts referenced above. Most notabl
 While implementing this change, I discovered that if a two person's presence sensors were updated at the same time, the automation's would only update the state for one person. The reason for this was that up until [Home Assistant 0.113](https://community.home-assistant.io/t/0-113-automations-scripts-and-even-more-performance/213387), automations triggered whilst already running would just drop silently. With the new directive `mode: queued`, the automations work just fine.
 
 ### Family presence state
-In addition to the individual presence states `input_select.userX_status_dropdown`, I am using a template sensor `family_presence_state` to set the presence state of the family. The way the template works is that it returns the "lowest" presence state observed amongst any family member in `group.family_home_sensor`, with the state "Home" being the lowest, and the state "Gone 24h" being the highest. The Family presence state is useful to set the house to simulation mode when family has been away for more than 24h (state = "Gone 24h"). For more information about my house modes and simulations, see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state).
+In addition to the individual presence states `input_select.userX_status_dropdown`, I am using a template sensor `sensor.family_presence_state` to set the presence state of the family. The way the template works is that it returns the "lowest" presence state observed amongst any family member in `group.family_home_sensor`, with the state "Home" being the lowest, and the state "Gone 24h" being the highest. The Family presence state is useful to set the house to simulation mode when family has been away for e.g. more than 24 hours. For more information about my house modes and simulations, see [Home state setup in Home Assistant](https://github.com/klec00/ha-home-state).
 
 <img src="./image/PresenceFamily.png" width="600"/>
 
-The template code to set the `family_presence_state` is not the prettiest I've ever written, and I assume there is a smarter way to achieve the same result:
+The template code to set the `family_presence_state` is not the prettiest I've ever created, and I assume there is a smarter way to achieve the same result:
 
 ````
 family_presence_state:
